@@ -1,0 +1,131 @@
+.fetlife-event {
+	background-color: #222;
+	padding: 10px;
+	margin-bottom: 15px;
+	color: #777;
+}
+
+.single-fetlife-event {
+	margin-bottom: 0;
+}
+
+.fetlife-event-ongoing {
+	border: 5px solid #6F6F6F;
+	color: #DDD;
+}
+
+.fetlife-event-next {
+	border: 5px solid #BB1515;
+	color: #DDD;
+}
+
+.fetlife-event label {
+	font-weight: bold;
+}
+
+.fetlife-event > span {
+	margin-bottom: 15px;
+	display: inline-block;
+}
+
+.post .fetlife-event-next a span.fetlife-event-button {
+	color: #111;
+	background-color: #BB1515;
+}
+.post .fetlife-event-ongoing a span.fetlife-event-button {
+	color: #DDD;
+	background-color: #6F6F6F;
+}
+
+.post a.fetlife-event-link, 
+.post a.fetlife-event-link:hover {
+	color: #777;
+	position: relative;
+	margin-top: 15px;
+	background-color: #111;
+	border-radius: 0px;
+	-moz-border-radius: 0px;
+	-webkit-border-radius: 0px;
+	border: none;
+	font-weight: bold;
+	display: inline-block !important;
+	text-align: center;
+	text-decoration: none !important;
+	box-sizing: content-box !important;
+	-moz-box-sizing: content-box !important;
+	-webkit-box-sizing: content-box !important;
+	transition: all .2s;
+	-o-transition: all .2s;
+	-ie-transition: all .2s;
+	-moz-transition: all .2s;
+	-webkit-transition: all .2s;
+}
+
+.post a.fetlife-event-link:hover {
+	top: 1px;
+}
+
+.post a span.fetlife-event-button {
+	color: #777;
+	padding: 4px 10px;
+	font-size: 17px;
+	line-height: 26px;
+	border-radius: 0px;
+	-moz-border-radius: 0px;
+	-webkit-border-radius: 0px;
+	text-shadow: none;
+	-moz-text-shadow: none;
+	-webkit-text-shadow: none;
+	position: relative;
+	border: none;
+	display: block !important;
+	text-decoration: none !important;
+	box-sizing: content-box !important;
+	-moz-box-sizing: content-box !important;
+	-webkit-box-sizing: content-box !important;
+	transition: all .2s;
+	-o-transition: all .2s;
+	-ie-transition: all .2s;
+	-moz-transition: all .2s;
+	-webkit-transition: all .2s
+}
+
+h4.fetlife-event-title,
+.main h4.fetlife-event-title,
+.post-main h4.fetlife-event-title {
+	font-weight: bold;
+	color: #DDD;
+}
+
+.fetlife-event-notice {
+	display: inline-block;
+    float: right;
+    font-weight: bold;
+    font-size: 80%;
+    padding: 0 5px 5px 10px;
+    position: relative;
+    top: -10px;
+    right: -10px;
+    text-transform: uppercase;
+}
+
+.fetlife-event-ongoing .fetlife-event-notice {
+	background: #6F6F6F;
+	color: #DDD;
+}
+
+.fetlife-event-next .fetlife-event-notice {
+	background: #BB1515;
+	color: #111;
+}
+
+.fetlife-event-date {
+	background-color: #111;
+	padding: 5px 10px;
+	border: 1px solid #333;
+}
+
+.fetlife-event-next .fetlife-event-date {
+	font-weight: bold;
+	border: 1px solid;
+}

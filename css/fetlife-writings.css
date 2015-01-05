@@ -1,0 +1,20 @@
+.fetlife-writing-meta {
+	background-color: #111;
+	padding: 2px 5px;
+	border: 1px solid #333;
+	color: #777;
+	font-size: 12px;
+	vertical-align: baseline;
+}
+
+.post-main h1.fetlife-writing-title {
+	line-height: 1em;
+}
+
+.fetlife-writing-content hr {
+	display: none;
+}
+
+.fetlife-writings-section img {
+	max-width: 100%!important;
+}

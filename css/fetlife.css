@@ -1,0 +1,20 @@
+
+#wpadminbar .ab-top-menu>li.fetlife-refresh-menu-processed.hover>.ab-item,
+#wpadminbar .ab-top-menu>li.fetlife-refresh-menu-processed:hover>.ab-item,
+#wpadminbar .ab-top-menu>li.fetlife-refresh-menu-processed>.ab-item:focus,
+#wpadminbar.nojq .quicklinks .ab-top-menu>li.fetlife-refresh-menu-processed>.ab-item:focus {
+	background: 0;
+	color: #FFF;
+}
+
+#wpadminbar ul li.fetlife-refresh-success, #wpadminbar ul li.fetlife-refresh-success:hover {
+	background-color: #138600;
+}
+
+#wpadminbar ul li.fetlife-refresh-ongoing, #wpadminbar ul li.fetlife-refresh-ongoing:hover {
+	background-color: #9D4D00;
+}
+
+#wpadminbar ul li.fetlife-refresh-fail, #wpadminbar ul li.fetlife-refresh-fail:hover {
+	background-color: #9D0000;
+}
