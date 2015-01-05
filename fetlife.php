@@ -63,7 +63,7 @@ class WP_Fetlife {
 
 	public function __call($method, $arguments) {
 		if (!$connected = $this->fetlifeConnect()) {
-			print_r('failed :(<br/>');
+			// print_r('failed :(<br/>');
 			trigger_error(
 	            'Fetlife Connection failed - cannot directly use FetLife library in ' . $trace[0]['file'] .
 	            ' on line ' . $trace[0]['line'],
@@ -71,7 +71,7 @@ class WP_Fetlife {
 			delete_transient("feftlife_refreshing");
 			return null;
 		}
-		print_r('success :)<br/>');
+		// print_r('success :)<br/>');
 		if (method_exists($this->fetlifeUser, $method)) {
 			// error_log("calling " . $method . "\n", 3, '/home/danfroal/public_html/dev/error_log');
 			$return = call_user_func_array(array($this->fetlifeUser, $method), $arguments);
