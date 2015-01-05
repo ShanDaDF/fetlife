@@ -127,7 +127,7 @@ class WP_Fetlife {
 				$fetlifeUser = new FetLifeUser($username, $password);
 				$this->fetlifeUser = $fetlifeUser;
 				// $this->fetlifeUser->connection->setProxy('auto');
-				$this->fetlifeUser->connection->setProxy('104.194.206.10:7808');
+				// $this->fetlifeUser->connection->setProxy('104.194.206.10:7808');
 				// error_log("connecting\n", 3, '/home/danfroal/public_html/dev/error_log');
 				$this->isLoggedIn = $this->fetlifeUser->logIn();
 				// error_log("connected? " . $this->isLoggedIn . "\n", 3, '/home/danfroal/public_html/dev/error_log');
