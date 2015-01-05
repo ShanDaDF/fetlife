@@ -8,10 +8,14 @@ Version: 1.0
 Author: ShanDa DF
 Author URI: http://beijingkink.com/
 */
-
+$upload_dir = wp_upload_dir();
 define('FETLIFE_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('FETLIFE_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('FL_SESSIONS_DIR', WP_CONTENT_DIR);
+define('FL_PICS_DIR', $upload_dir['basedir'] . '/fl_pics');
+define('FL_PICS_URL', $upload_dir['baseurl'] . '/fl_pics');
+
+
 if (!defined('FETLIFE_MAX_POPULATE')) {
 	define('FETLIFE_MAX_POPULATE', 15);
 }
@@ -38,6 +42,13 @@ class WP_Fetlife {
 			}
 		}
 
+		$fetlife_pics_dir = FL_PICS_DIR;
+        if (!file_exists($fetlife_pics_dir)) {
+            if (!mkdir($fetlife_pics_dir, 0755)) {
+                die("Failed to create FetLife Pictures directory at $dir");
+            }
+        }
+
 		register_activation_hook(FETLIFE_PLUGIN_PATH . 'fetlife.php', array($this, 'fetlifeCron'));
 
 		add_filter('option_fetlife_settings',  array($this, 'get_option'));
@@ -48,7 +59,9 @@ class WP_Fetlife {
 		add_action('init', array($this, 'fetlifeWritingPostCategory'));
 		add_action('admin_bar_menu', array($this, 'refreshMenu'), 999);
 		add_action('wp_ajax_refresh_fetlife', array($this, 'refreshFetlifeHandler'));
-		add_action('wp_ajax_no_priv_refresh_fetlife', array($this, 'refreshFetlifeRequireLogin'));
+		add_action('wp_ajax_nopriv_refresh_fetlife', array($this, 'refreshFetlifeRequireLogin'));
+		add_action('wp_ajax_fetlife_save_picture', array($this, 'savePictureAjax'));
+		add_action('wp_ajax_nopriv_fetlife_save_picture', array($this, 'savePictureAjax'));
 		add_action('admin_menu', array($this, 'settingsMenu'));
 		add_action('admin_init', array($this, 'registerAndBuildFields'));
 		add_action('widgets_init', array($this, 'fetlife_load_widgets'));
@@ -65,17 +78,20 @@ class WP_Fetlife {
 		if (!$connected = $this->fetlifeConnect()) {
 			// print_r('failed :(<br/>');
 			trigger_error(
-	            'Fetlife Connection failed - cannot directly use FetLife library in ' . $trace[0]['file'] .
+	            'fetlifeConnect Connection failed - cannot directly use FetLife library in ' . $trace[0]['file'] .
 	            ' on line ' . $trace[0]['line'],
 	            E_USER_NOTICE);
 			delete_transient("feftlife_refreshing");
 			return null;
 		}
-		// print_r('success :)<br/>');
+
+		if ($pages > FETLIFE_MAX_PAGE || $pages = 0) {
+			$pages = FETLIFE_MAX_PAGE;
+		}
+
+
 		if (method_exists($this->fetlifeUser, $method)) {
-			// error_log("calling " . $method . "\n", 3, '/home/danfroal/public_html/dev/error_log');
 			$return = call_user_func_array(array($this->fetlifeUser, $method), $arguments);
-			// error_log("called " . $method . "\n", 3, '/home/danfroal/public_html/dev/error_log');
 			return $return;
 		}
 
@@ -94,7 +110,7 @@ class WP_Fetlife {
 			throw new Exception(".", 2);
 			$trace = debug_backtrace();
 			trigger_error(
-	            'Fetlife Connection failed - cannot directly use FetLife library in ' . $trace[0]['file'] .
+	            'fetlifeConnect Connection failed - cannot directly use FetLife library in ' . $trace[0]['file'] .
 	            ' on line ' . $trace[0]['line'],
 	            E_USER_NOTICE);
 			delete_transient("feftlife_refreshing");
@@ -102,9 +118,7 @@ class WP_Fetlife {
 		}
 
 		if (property_exists(get_class($this->fetlifeUser), $name)) {
-			// error_log("getting " . $name . "\n", 3, '/home/danfroal/public_html/dev/error_log');
 			$return = $this->fetlifeUser->{$name};
-			// error_log("got " . $name . "\n", 3, '/home/danfroal/public_html/dev/error_log');
 			return $return;
 		}
 
@@ -128,9 +142,7 @@ class WP_Fetlife {
 				$this->fetlifeUser = $fetlifeUser;
 				// $this->fetlifeUser->connection->setProxy('auto');
 				// $this->fetlifeUser->connection->setProxy('104.194.206.10:7808');
-				// error_log("connecting\n", 3, '/home/danfroal/public_html/dev/error_log');
 				$this->isLoggedIn = $this->fetlifeUser->logIn();
-				// error_log("connected? " . $this->isLoggedIn . "\n", 3, '/home/danfroal/public_html/dev/error_log');
 				self::secureFetlifeObject($fetlifeUser);
 			} else {
 				unset($this->fetlifeUser);
@@ -139,10 +151,52 @@ class WP_Fetlife {
 		return $this->isLoggedIn;
 	}
 
+	private function savePicture($user_id, $url, $prefix = '', $suffix = '') {
+		if (!is_numeric($user_id)) {
+			return $url;
+		}
+
+		$fetlife_user_pics_dir = FL_PICS_DIR . '/' . $user_id;
+		
+		$return			= $url;
+		$source			= $url;
+		$fileinfo		= pathinfo(basename($source));
+		$ext			= $fileinfo['extension'];
+		$filename		= $fileinfo['filename'];
+		$localBasename	= $prefix . $filename . $suffix . '.' . $ext;
+		$destination	= $fetlife_user_pics_dir . '/' . $localBasename;
+		
+        if (!file_exists($fetlife_user_pics_dir)) {
+            if (!mkdir($fetlife_user_pics_dir, 0755)) {
+            	trigger_error(
+					'getLocalAvatarURL - Failed to create FetLife Pictures directory at ' . $fetlife_user_pics_dir .
+					' in ' . $trace[0]['file'] .
+					' on line ' . $trace[0]['line'],
+				E_USER_NOTICE);
+                return $return;
+            }
+        }
+        if (!file_exists($destination)) {
+        	if (!copy($source, $destination)) {
+				trigger_error(
+					'getLocalAvatarURL - cannot copy ' . $source . ' to ' . $destination . 
+					' in ' . $trace[0]['file'] .
+					' on line ' . $trace[0]['line'],
+				E_USER_NOTICE);
+	        } else {
+	        	$return = FL_PICS_URL . '/' . $user_id . '/' . $localBasename;
+	        }
+        } else {
+        	$return = FL_PICS_URL . '/' . $user_id . '/' . $localBasename;
+        }
+
+        return $return;
+
+	}
+
 	/** ============================= PROTECTED METHODS ============================= **/
 
 	protected static function secureFetlifeObject($obj) {
-		// error_log("securing object...\n", 3, '/home/danfroal/public_html/dev/error_log');
 		$fetlife_settings = get_option('fetlife_settings');
 		if (is_object($obj) && !$obj->isSecure) {
 			if (property_exists(get_class($obj), 'password')) {
@@ -225,7 +279,11 @@ class WP_Fetlife {
 	}
 
 	protected static function cleanFetlifeContent($content) {
-		wp_enqueue_script('fetlife_content_clean', FETLIFE_PLUGIN_URL . '/js/fetlife-content-clean.js', array('jquery'), false, true);
+		$content = str_replace('<img src', '<img src-fetlife', $content);
+		wp_register_script('fetlife_content_clean', FETLIFE_PLUGIN_URL . '/js/fetlife-content-clean.js', array('jquery'), false, true);
+		wp_localize_script('fetlife_content_clean', 'Fetlife', array('ajaxurl' => admin_url('admin-ajax.php')));        
+		wp_enqueue_script('jquery');
+		wp_enqueue_script('fetlife_content_clean');
 		return $content;
 	}
 
@@ -613,9 +671,30 @@ class WP_Fetlife {
 		$wp_admin_bar->add_node($args);
 	}
 
+	public function savePictureAjax() {
+
+		$fetlife_picture_url = $_REQUEST['fetlife_picture_url'];
+		$url = $_REQUEST['url'];
+		$fetlife_picture_url_parts = explode('/', $fetlife_picture_url);
+
+		$condition = isset($fetlife_picture_url_parts[1]) 
+				&& isset($fetlife_picture_url_parts[3]) 
+				&& !empty($fetlife_picture_url_parts[1])
+				&& !empty($fetlife_picture_url_parts[3])
+				&& $fetlife_picture_url_parts[1] == 'users'
+				&& $fetlife_picture_url_parts[3] == 'pictures';
+
+		if ($condition) {
+			$user_id = $fetlife_picture_url_parts[2];
+			$url = $this->savePicture($user_id, $url);
+		}
+
+		echo $url;
+		die();
+	}
+
 	public function refreshFetlifeHandler() {
 		if (get_transient('feftlife_refreshing')) {
-			// error_log("ajax refreshing - already running, aborting.\n", 3, '/home/danfroal/public_html/dev/error_log');
 			delete_transient('feftlife_refreshing');
 			echo false;
 			die();
@@ -626,14 +705,11 @@ class WP_Fetlife {
 			delete_transient('feftlife_refreshing');
 			exit("Invalid nonce");
 		}
-		// error_log("ajax refreshing - fetlife data\n", 3, '/home/danfroal/public_html/dev/error_log');
 		// null: connection status isn't defined.
 		$connect = null;
 		$response = apply_filters('refreshFetlife', $connect);
 
 		delete_transient('feftlife_refreshing');
-		// error_log("ajax refreshed - fetlife data\n", 3, '/home/danfroal/public_html/dev/error_log');
-		// error_log("ajax response: " . $response . "\n", 3, '/home/danfroal/public_html/dev/error_log');
 
 		echo $response;
 		die();
@@ -758,7 +834,6 @@ class WP_Fetlife {
 	/** ------ Fetlife actions & filters ----- **/
 
 	public function fetchNextEventsByOrganiser($connect = null) {
-		// error_log("ajax refreshing - fetlife data events\n", 3, '/home/danfroal/public_html/dev/error_log');
 		self::clearFetlifeTransients('next_events_organiser');
 		$organisers = self::getDefaultFetlifeContentIds('fetlife_event_organiser');
 		$contents = self::findContentUsingFetlifeShortcode("fetlife_events");
@@ -857,21 +932,30 @@ class WP_Fetlife {
 		// $debug["JohnBaku's ID - prints 1"] = $FL->getUserIdByNickname('JohnBaku'); // prints "1"
 		// $debug["prints 'BeijingMunch'"] = $FL->getUserNicknameById(2002568);       // prints "maymay"
 
-		// // Object-oriented access to user info is available as FetLifeProfile objects.
+		// Object-oriented access to user info is available as FetLifeProfile objects.
 		// $profile = $FL->getUserProfile(1);          // Profile with ID 1
 		// $debug["Profile of user ID 1 with some FetLifeProfile methods"] = array(
-		// 	'$profile->nickname' => $profile->nickname,
-		// 	'$profile->age' => $profile->age,
-		// 	'$profile->gender' => $profile->gender,
-		// 	'$profile->role' => $profile->role,
-		// 	'$profile->adr' => $profile->adr,
-		// 	'$profile->getAvatarURL() - optional $size parameter retrieves larger images' => $profile->getAvatarURL(),
-		// 	'$profile->isPayingAccount() - true if the profile has a "supporter" badge' => $profile->isPayingAccount(),
-		// 	'$profile->getEvents() - array of FetLifeEvent objects listed on the profile' => $profile->getEvents(),
-		// 	'$profile->getEventsGoingTo() - array of FetLifeEvent the user has RSVP\'ed "going" to' => $profile->getEventsGoingTo(),
-		// 	'$profile->getGroups() - array of FetLifeGroup objects listed on the profile' => $profile->getGroups(),
-		// 	'$profile->getGroupsLead() - array of FetLifeGroups the user moderates' => $profile->getGroupsLead(),
+			// '$profile->nickname' => $profile->nickname,
+			// '$profile->age' => $profile->age,
+			// '$profile->gender' => $profile->gender,
+			// '$profile->role' => $profile->role,
+			// '$profile->adr' => $profile->adr,
+			// '$profile->getAvatarURL() - optional $size parameter retrieves larger images' => $profile->getAvatarURL(),
+			// '$this->getLocalAvatarURL($profile) - retain the image on the server' => $this->getLocalAvatarURL($profile),
+			// '$profile->isPayingAccount() - true if the profile has a "supporter" badge' => $profile->isPayingAccount(),
+			// '$profile->getEvents() - array of FetLifeEvent objects listed on the profile' => $profile->getEvents(),
+			// '$profile->getEventsGoingTo() - array of FetLifeEvent the user has RSVP\'ed "going" to' => $profile->getEventsGoingTo(),
+			// '$profile->getGroups() - array of FetLifeGroup objects listed on the profile' => $profile->getGroups(),
+			// '$profile->getGroupsLead() - array of FetLifeGroups the user moderates' => $profile->getGroupsLead(),
 		// );
+
+		// $debug['$this->getPicturesOf(\'ShanDaDF\')'] = array();
+
+
+		// $pics = $this->getPicturesOf('ShanDaDF');
+		// foreach ($pics as $key => $pic) {
+		// 	$debug['$this->getPicturesOf(\'ShanDaDF\')'][] = array($pic->src, $pic->thumb_src);
+		// }
 
 		// $debug['Friends of BeijingMunch - by name, 2 pages'] = $FL->getFriendsOf('BeijingMunch', 2);
 		// $debug['Friends of BeijingMunch - by ID, 2 pages'] = $FL->getFriendsOf(2002568, 2);
@@ -936,9 +1020,7 @@ class WP_Fetlife {
 							// 	$debug[] = "There are $i Switches and $y male-identified people maybe going to {$events[2]->title}.";
 
 		$debug = base64_encode(serialize($debug));
-		// $debug = get_transient('fetlife_writings_501819');
 		set_transient('fetlife_debug', $debug);
-		// error_log($debug."\n", 3, '/home/danfroal/public_html/dev/error_log');
 
 		return self::didConnect($connect, true);
 	}
@@ -1112,6 +1194,30 @@ class WP_Fetlife {
 	public function addCronAndRefreshFilter($function_to_add, $priority = 10, $accepted_args = 1) {
 		add_action('fetlife_cron', $function_to_add, $priority, $accepted_args);
 		add_filter('refreshFetlife', $function_to_add, $priority, $accepted_args);
+	}
+
+	public function getLocalAvatarURL($profile) {
+		if (!isset($profile)) {
+			return '';
+		}
+
+		$user_id = $profile->id;
+		$url = $profile->getAvatarURL();
+		
+		$avatarURL = $this->savePicture($user_id, $url, 'avatar_' . $user_id . '_');
+
+	}
+
+	public function getPicturesOf($who = NULL, $pages = 0) {
+		if ($pages > FETLIFE_MAX_PAGE || $pages = 0) {
+			$pages = FETLIFE_MAX_PAGE;
+		}
+		$pics = $this->fetlifeUser->getPicturesOf($who, $pages);
+		foreach ($pics as $key => $pic) {
+			$pic->src 		= $this->savePicture($pic->creator->id, $pic->src);
+			$pic->thumb_src = $this->savePicture($pic->creator->id, $pic->thumb_src, '', '_thumb');
+		}
+		return $pics;
 	}
 }
 
