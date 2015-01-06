@@ -11,7 +11,7 @@ Author URI: http://beijingkink.com/
 $upload_dir = wp_upload_dir();
 define('FETLIFE_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('FETLIFE_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('FL_SESSIONS_DIR', WP_CONTENT_DIR);
+define('FL_SESSIONS_DIR', WP_CONTENT_DIR . '/fl_sessions');
 define('FL_PICS_DIR', $upload_dir['basedir'] . '/fl_pics');
 define('FL_PICS_URL', $upload_dir['baseurl'] . '/fl_pics');
 
@@ -76,7 +76,6 @@ class WP_Fetlife {
 
 	public function __call($method, $arguments) {
 		if (!$connected = $this->fetlifeConnect()) {
-			// print_r('failed :(<br/>');
 			trigger_error(
 	            'fetlifeConnect Connection failed - cannot directly use FetLife library in ' . $trace[0]['file'] .
 	            ' on line ' . $trace[0]['line'],
@@ -151,7 +150,7 @@ class WP_Fetlife {
 		return $this->isLoggedIn;
 	}
 
-	private function savePicture($user_id, $url, $prefix = '', $suffix = '') {
+	private static function savePicture($user_id, $url, $prefix = '', $suffix = '') {
 		if (!is_numeric($user_id)) {
 			return $url;
 		}
@@ -262,14 +261,14 @@ class WP_Fetlife {
 	}
 
 	protected static function getFetlifeTransients($transient_category = null) {
-		$option_name_pattern = isset($transient_category) ? '%_fetlife_{$transient_category}_%' : '%_fetlife_%';
+		$option_name_pattern = isset($transient_category) ? "%_fetlife_{$transient_category}_%" : "%_fetlife_%";
 		global $wpdb;
 	    $sql = "SELECT `option_name` AS `name`
 	            FROM  $wpdb->options
 	            WHERE `option_name` LIKE '{$option_name_pattern}'
 	            AND `option_name` NOT LIKE '%_transient_timeout_%'
 	            ORDER BY `option_name`";
-	    $results = $wpdb->get_results( $sql );
+	    $results = $wpdb->get_results($sql);
     	$transients = array();
 		foreach ($results as $key => $result){
 		    $transients[] = $result->name;
@@ -597,7 +596,7 @@ class WP_Fetlife {
 				$events = array();
 				$organiser = $this->fetlifeUser->getUserProfile($organiser_id);
 				if (is_object($organiser)) {
-					$events = $organiser->getEventsOrganised();
+					$events = $organiser->getEventsOrganizing();
 				}
 
 				if(!empty($events)) {
@@ -686,7 +685,7 @@ class WP_Fetlife {
 
 		if ($condition) {
 			$user_id = $fetlife_picture_url_parts[2];
-			$url = $this->savePicture($user_id, $url);
+			$url = self::savePicture($user_id, $url);
 		}
 
 		echo $url;
@@ -1191,12 +1190,12 @@ class WP_Fetlife {
 
 	/** ------ Other public methods ----- **/
 
-	public function addCronAndRefreshFilter($function_to_add, $priority = 10, $accepted_args = 1) {
-		add_action('fetlife_cron', $function_to_add, $priority, $accepted_args);
-		add_filter('refreshFetlife', $function_to_add, $priority, $accepted_args);
+	public static function getNextEvent() {
+		$events = self::getFetlifeEvents('all', true);
+		return empty($events) ? false : reset($events);
 	}
 
-	public function getLocalAvatarURL($profile) {
+	public static function getLocalAvatarURL($profile) {
 		if (!isset($profile)) {
 			return '';
 		}
@@ -1204,8 +1203,13 @@ class WP_Fetlife {
 		$user_id = $profile->id;
 		$url = $profile->getAvatarURL();
 		
-		$avatarURL = $this->savePicture($user_id, $url, 'avatar_' . $user_id . '_');
+		$avatarURL = self::savePicture($user_id, $url, 'avatar_' . $user_id . '_');
 
+	}
+
+	public function addCronAndRefreshFilter($function_to_add, $priority = 10, $accepted_args = 1) {
+		add_action('fetlife_cron', $function_to_add, $priority, $accepted_args);
+		add_filter('refreshFetlife', $function_to_add, $priority, $accepted_args);
 	}
 
 	public function getPicturesOf($who = NULL, $pages = 0) {
@@ -1214,8 +1218,8 @@ class WP_Fetlife {
 		}
 		$pics = $this->fetlifeUser->getPicturesOf($who, $pages);
 		foreach ($pics as $key => $pic) {
-			$pic->src 		= $this->savePicture($pic->creator->id, $pic->src);
-			$pic->thumb_src = $this->savePicture($pic->creator->id, $pic->thumb_src, '', '_thumb');
+			$pic->src 		= self::savePicture($pic->creator->id, $pic->src);
+			$pic->thumb_src = self::savePicture($pic->creator->id, $pic->thumb_src, '', '_thumb');
 		}
 		return $pics;
 	}
