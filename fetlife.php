@@ -740,7 +740,7 @@ class WP_Fetlife {
 		add_settings_field('fetlife_username', 'Fetlife username:', array($this, 'usernameSetting'), 'fetlife', 'fetlife_settings_main_section');
 		add_settings_field('fetlife_password', 'Fetlife password:', array($this, 'passwordSetting'), 'fetlife', 'fetlife_settings_main_section');
 		add_settings_field('fetlife_location', 'Fetlife events location:', array($this, 'locationSetting'), 'fetlife', 'fetlife_settings_main_section');
-		add_settings_field('fetlife_event_organiser', 'Fetlife events organisers\' IDs:', array($this, 'eventOrganisersSetting'), 'fetlife', 'fetlife_settings_main_section');
+		add_settings_field('fetlife_default_followed_user', 'Default Fetlife followed user\' IDs:', array($this, 'defaultFollowedUserSetting'), 'fetlife', 'fetlife_settings_main_section');
 	}
 
 	public function fetlifeWritingPostCategory() {
@@ -834,7 +834,7 @@ class WP_Fetlife {
 
 	public function fetchNextEventsByOrganiser($connect = null) {
 		self::clearFetlifeTransients('next_events_organiser');
-		$organisers = self::getDefaultFetlifeContentIds('fetlife_event_organiser');
+		$organisers = self::getDefaultFetlifeContentIds('fetlife_default_followed_user');
 		$contents = self::findContentUsingFetlifeShortcode("fetlife_events");
 		if (!empty($contents)) {
 			foreach ($contents as $key => $content) {
@@ -881,7 +881,7 @@ class WP_Fetlife {
 						}
 					}
 				} 
-				$user_id = reset(self::getDefaultFetlifeContentIds('fetlife_event_organiser'));
+				$user_id = reset(self::getDefaultFetlifeContentIds('fetlife_default_followed_user'));
 				if ($user_id) {
 					$writing_ids = array();
 					if (preg_match_all('/\[fetlife_writings ([^\]]*)?writing_id=\"([0-9]+(,( )?[0-9]+)*)\"([^\]]*)?\]/i', $content, $writings_match_result)) {
@@ -951,10 +951,10 @@ class WP_Fetlife {
 		// $debug['$this->getPicturesOf(\'ShanDaDF\')'] = array();
 
 
-		// $pics = $this->getPicturesOf('ShanDaDF');
-		// foreach ($pics as $key => $pic) {
-		// 	$debug['$this->getPicturesOf(\'ShanDaDF\')'][] = array($pic->src, $pic->thumb_src);
-		// }
+		$pics = $this->getPicturesOf('ShanDaDF');
+		foreach ($pics as $key => $pic) {
+			$debug['$this->getPicturesOf(\'ShanDaDF\')'][] = array($pic->src, $pic->thumb_src);
+		}
 
 		// $debug['Friends of BeijingMunch - by name, 2 pages'] = $FL->getFriendsOf('BeijingMunch', 2);
 		// $debug['Friends of BeijingMunch - by ID, 2 pages'] = $FL->getFriendsOf(2002568, 2);
@@ -1031,7 +1031,7 @@ class WP_Fetlife {
 		$output = '';
 
 		extract(shortcode_atts(array(
-			'organiser_id' => str_replace(' ', '', $fetlife_settings['fetlife_event_organiser']),
+			'organiser_id' => str_replace(' ', '', $fetlife_settings['fetlife_default_followed_user']),
 			'limit' => 0,
 		), $atts));
 
@@ -1073,7 +1073,7 @@ class WP_Fetlife {
 		$output = '';
 
 		extract(shortcode_atts(array(
-			'user_id'	 => str_replace(' ', '', array_shift(explode(',', $fetlife_settings['fetlife_event_organiser']))),
+			'user_id'	 => str_replace(' ', '', array_shift(explode(',', $fetlife_settings['fetlife_default_followed_user']))),
 			'writing_id' => '',
 		), $atts));
 
@@ -1135,12 +1135,12 @@ class WP_Fetlife {
 			$error = true;
 		}
 
-		if (!empty($settings['fetlife_event_organiser'])) {
-			$ids = explode(',', $settings['fetlife_event_organiser']);;
+		if (!empty($settings['fetlife_default_followed_user'])) {
+			$ids = explode(',', $settings['fetlife_default_followed_user']);;
 			foreach ($ids as $key => $id) {
 				$id = str_replace(' ', '', $id);
 				if (!is_numeric($id)) {
-					add_settings_error('fetlife_event_organiser', 'fetlife_event_organiser', "Invalid Fetlife user identifier.");
+					add_settings_error('fetlife_default_followed_user', 'fetlife_default_followed_user', "Invalid Fetlife user identifier.");
 					$error = true;
 					break;
 				}
@@ -1183,9 +1183,9 @@ class WP_Fetlife {
 		print "<input name='fetlife_settings[fetlife_location]' type='text' value='{$options['fetlife_location']}' /> <span>" . __("optional", "fetlife") . "</span> <p>" . __("A \"[location_type]/[id]\" string from fetlife url where [location_type] is  \"cities\", \"administrative_areas\", or \"countries\" and [id] the unique identifier of the location of the events to follow.", "fetlife") . "</p>";
 	}
 
-	public function eventOrganisersSetting() {  
+	public function defaultFollowedUserSetting() {  
 		$options = get_option('fetlife_settings');  
-		print "<input name='fetlife_settings[fetlife_event_organiser]' type='text' value='{$options['fetlife_event_organiser']}' /> <span>" . __("optional", "fetlife") . "</span> <p>" . __("A single ID or a comma separated value list of IDs of fetlife users to follow.", "fetlife") . "</p>";
+		print "<input name='fetlife_settings[fetlife_default_followed_user]' type='text' value='{$options['fetlife_default_followed_user']}' /> <span>" . __("optional", "fetlife") . "</span> <p>" . __("A single ID or a comma separated value list of IDs of fetlife users to follow. Prefer a single ID for performance.", "fetlife") . "</p>";
 	}
 
 	/** ------ Other public methods ----- **/
